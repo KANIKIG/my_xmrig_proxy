@@ -94,81 +94,38 @@ fi
 
 # printing intentions
 
-echo "I will download, setup and run in background Monero CPU miner."
-echo "If needed, miner in foreground can be started by $HOME/moneroocean/miner.sh script."
+echo "I will download, setup and run in background Monero CPU proxy."
+echo "If needed, proxy in foreground can be started by $HOME/xmrig-proxy/proxy.sh script."
 echo "Mining will happen to $WALLET wallet."
 echo
 
 if ! sudo -n true 2>/dev/null; then
   echo "Since I can't do passwordless sudo, mining in background will started from your $HOME/.profile file first time you login this host after reboot."
 else
-  echo "Mining in background will be performed using moneroocean_miner systemd service."
+  echo "Mining in background will be performed using xmrig-proxy systemd service."
 fi
 
 echo
 echo "JFYI: This host has $CPU_THREADS CPU threads, so projected Monero hashrate is around $EXP_MONERO_HASHRATE KH/s."
 echo
 
-# start doing stuff: preparing miner
+# start doing stuff: preparing proxy
 
 echo "[*] Downloading xmrig-proxy to /tmp/xmrig-proxy.tar.gz"
-if ! curl -L --progress-bar "https://raw.githubusercontent.com/MoneroOcean/xmrig_setup/master/xmrig.tar.gz" -o /tmp/xmrig.tar.gz; then
-  echo "ERROR: Can't download https://raw.githubusercontent.com/MoneroOcean/xmrig_setup/master/xmrig.tar.gz file to /tmp/xmrig.tar.gz"
+if ! curl -L --progress-bar "https://github.com/KANIKIG/my_xmrig_proxy/raw/main/xmrig-proxy.tar.gz" -o /tmp/xmrig-proxy.tar.gz; then
+  echo "ERROR: Can't download https://github.com/KANIKIG/my_xmrig_proxy/raw/main/xmrig-proxy.tar.gz file to /tmp/xmrig-proxy.tar.gz"
   exit 1
 fi
 
-echo "[*] Unpacking /tmp/xmrig.tar.gz to $HOME/moneroocean"
-[ -d $HOME/moneroocean ] || mkdir $HOME/moneroocean
-if ! tar xf /tmp/xmrig.tar.gz -C $HOME/moneroocean; then
-  echo "ERROR: Can't unpack /tmp/xmrig.tar.gz to $HOME/moneroocean directory"
+echo "[*] Unpacking /tmp/xmrig-proxy.tar.gz to $HOME/xmrig-proxy"
+[ -d $HOME/xmrig-proxy ] || mkdir $HOME/xmrig-proxy
+if ! tar xf /tmp/xmrig-proxy.tar.gz -C $HOME/xmrig-proxy; then
+  echo "ERROR: Can't unpack /tmp/xmrig-proxy.tar.gz to $HOME/xmrig-proxy directory"
   exit 1
 fi
-rm /tmp/xmrig.tar.gz
+rm /tmp/xmrig-proxy.tar.gz
 
-echo "[*] Checking if advanced version of $HOME/moneroocean/xmrig works fine (and not removed by antivirus software)"
-sed -i 's/"donate-level": *[^,]*,/"donate-level": 0,/' $HOME/moneroocean/config.json
-$HOME/moneroocean/xmrig --help >/dev/null
-if (test $? -ne 0); then
-  if [ -f $HOME/moneroocean/xmrig ]; then
-    echo "WARNING: Advanced version of $HOME/moneroocean/xmrig is not functional"
-  else 
-    echo "WARNING: Advanced version of $HOME/moneroocean/xmrig was removed by antivirus (or some other problem)"
-  fi
-
-  echo "[*] Looking for the latest version of Monero miner"
-  LATEST_XMRIG_RELEASE=`curl -s https://github.com/xmrig/xmrig/releases/latest  | grep -o '".*"' | sed 's/"//g'`
-  LATEST_XMRIG_LINUX_RELEASE="https://github.com"`curl -s $LATEST_XMRIG_RELEASE | grep xenial-x64.tar.gz\" |  cut -d \" -f2`
-
-  echo "[*] Downloading $LATEST_XMRIG_LINUX_RELEASE to /tmp/xmrig.tar.gz"
-  if ! curl -L --progress-bar $LATEST_XMRIG_LINUX_RELEASE -o /tmp/xmrig.tar.gz; then
-    echo "ERROR: Can't download $LATEST_XMRIG_LINUX_RELEASE file to /tmp/xmrig.tar.gz"
-    exit 1
-  fi
-
-  echo "[*] Unpacking /tmp/xmrig.tar.gz to $HOME/moneroocean"
-  if ! tar xf /tmp/xmrig.tar.gz -C $HOME/moneroocean --strip=1; then
-    echo "WARNING: Can't unpack /tmp/xmrig.tar.gz to $HOME/moneroocean directory"
-  fi
-  rm /tmp/xmrig.tar.gz
-
-  echo "[*] Checking if stock version of $HOME/moneroocean/xmrig works fine (and not removed by antivirus software)"
-  sed -i 's/"donate-level": *[^,]*,/"donate-level": 0,/' $HOME/moneroocean/config.json
-  $HOME/moneroocean/xmrig --help >/dev/null
-  if (test $? -ne 0); then 
-    if [ -f $HOME/moneroocean/xmrig ]; then
-      echo "ERROR: Stock version of $HOME/moneroocean/xmrig is not functional too"
-    else 
-      echo "ERROR: Stock version of $HOME/moneroocean/xmrig was removed by antivirus too"
-    fi
-    exit 1
-  fi
-fi
-
-rm -f $HOME/moneroocean/xmrig
-echo "[*] Official Miner $HOME/moneroocean/xmrig is deleted"
-wget -P $HOME/moneroocean https://github.com/KANIKIG/my_xmrig/raw/main/xmrig
-chmod +x $HOME/moneroocean/xmrig
-echo "[*] My Miner $HOME/moneroocean/xmrig is OK"
+echo "[*] My Proxy $HOME/xmrig-proxy/xmrig-proxy is OK"
 
 PASS=`hostname | cut -f1 -d"." | sed -r 's/[^a-zA-Z0-9\-]+/_/g'`
 if [ "$PASS" == "localhost" ]; then
@@ -178,66 +135,59 @@ if [ -z $PASS ]; then
   PASS=na
 fi
 
-sed -i 's/"url": *"[^"]*",/"url": "gulf.moneroocean.stream:'$PORT'",/' $HOME/moneroocean/config.json
-sed -i 's/"user": *"[^"]*",/"user": "'$WALLET'",/' $HOME/moneroocean/config.json
-sed -i 's/"pass": *"[^"]*",/"pass": "'$PASS'",/' $HOME/moneroocean/config.json
-sed -i 's/"max-cpu-usage": *[^,]*,/"max-cpu-usage": 100,/' $HOME/moneroocean/config.json
-sed -i 's#"log-file": *null,#"log-file": "'$HOME/moneroocean/xmrig.log'",#' $HOME/moneroocean/config.json
-sed -i 's/"syslog": *[^,]*,/"syslog": true,/' $HOME/moneroocean/config.json
+sed -i 's/"url": *"[^"]*",/"url": "gulf.xmrig-proxy.stream:'$PORT'",/' $HOME/xmrig-proxy/config.json
+sed -i 's/"user": *"[^"]*",/"user": "'$WALLET'",/' $HOME/xmrig-proxy/config.json
+sed -i 's/"pass": *"[^"]*",/"pass": "'$PASS'",/' $HOME/xmrig-proxy/config.json
+sed -i 's#"log-file": *null,#"log-file": "'$HOME/xmrig-proxy/xmrig-proxy.log'",#' $HOME/xmrig-proxy/config.json
+sed -i 's/"syslog": *[^,]*,/"syslog": true,/' $HOME/xmrig-proxy/config.json
 
-cp $HOME/moneroocean/config.json $HOME/moneroocean/config_background.json
-sed -i 's/"background": *false,/"background": true,/' $HOME/moneroocean/config_background.json
+cp $HOME/xmrig-proxy/config.json $HOME/xmrig-proxy/config_background.json
+sed -i 's/"background": *false,/"background": true,/' $HOME/xmrig-proxy/config_background.json
 
 # preparing script
 
-echo "[*] Creating $HOME/moneroocean/miner.sh script"
-cat >$HOME/moneroocean/miner.sh <<EOL
+echo "[*] Creating $HOME/xmrig-proxy/proxy.sh script"
+cat >$HOME/xmrig-proxy/proxy.sh <<EOL
 #!/bin/bash
-if ! pidof xmrig >/dev/null; then
-  nice $HOME/moneroocean/xmrig \$*
+if ! pidof xmrig-proxy >/dev/null; then
+  nice $HOME/xmrig-proxy/xmrig-proxy \$*
 else
-  echo "Monero miner is already running in the background. Refusing to run another one."
-  echo "Run \"killall xmrig\" or \"sudo killall xmrig\" if you want to remove background miner first."
+  echo "Monero proxy is already running in the background. Refusing to run another one."
+  echo "Run \"killall xmrig-proxy\" or \"sudo killall xmrig-proxy\" if you want to remove background proxy first."
 fi
 EOL
 
-chmod +x $HOME/moneroocean/miner.sh
+chmod +x $HOME/xmrig-proxy/proxy.sh
 
 # preparing script background work and work under reboot
 
 if ! sudo -n true 2>/dev/null; then
-  if ! grep moneroocean/miner.sh $HOME/.profile >/dev/null; then
-    echo "[*] Adding $HOME/moneroocean/miner.sh script to $HOME/.profile"
-    echo "$HOME/moneroocean/miner.sh --config=$HOME/moneroocean/config_background.json >/dev/null 2>&1" >>$HOME/.profile
+  if ! grep xmrig-proxy/proxy.sh $HOME/.profile >/dev/null; then
+    echo "[*] Adding $HOME/xmrig-proxy/proxy.sh script to $HOME/.profile"
+    echo "$HOME/xmrig-proxy/proxy.sh --config=$HOME/xmrig-proxy/config_background.json >/dev/null 2>&1" >>$HOME/.profile
   else 
-    echo "Looks like $HOME/moneroocean/miner.sh script is already in the $HOME/.profile"
+    echo "Looks like $HOME/xmrig-proxy/proxy.sh script is already in the $HOME/.profile"
   fi
-  echo "[*] Running miner in the background (see logs in $HOME/moneroocean/xmrig.log file)"
-  /bin/bash $HOME/moneroocean/miner.sh --config=$HOME/moneroocean/config_background.json >/dev/null 2>&1
+  echo "[*] Running proxy in the background (see logs in $HOME/xmrig-proxy/xmrig.log file)"
+  /bin/bash $HOME/xmrig-proxy/proxy.sh --config=$HOME/xmrig-proxy/config_background.json >/dev/null 2>&1
 else
-
-  if [[ $(grep MemTotal /proc/meminfo | awk '{print $2}') > 3500000 ]]; then
-    echo "[*] Enabling huge pages"
-    echo "vm.nr_hugepages=$((1168+$(nproc)))" | sudo tee -a /etc/sysctl.conf
-    sudo sysctl -w vm.nr_hugepages=$((1168+$(nproc)))
-  fi
 
   if ! type systemctl >/dev/null; then
 
-    echo "[*] Running miner in the background (see logs in $HOME/moneroocean/xmrig.log file)"
-    /bin/bash $HOME/moneroocean/miner.sh --config=$HOME/moneroocean/config_background.json >/dev/null 2>&1
+    echo "[*] Running proxy in the background (see logs in $HOME/xmrig-proxy/xmrig-proxy.log file)"
+    /bin/bash $HOME/xmrig-proxy/proxy.sh --config=$HOME/xmrig-proxy/config_background.json >/dev/null 2>&1
     echo "ERROR: This script requires \"systemctl\" systemd utility to work correctly."
-    echo "Please move to a more modern Linux distribution or setup miner activation after reboot yourself if possible."
+    echo "Please move to a more modern Linux distribution or setup proxy activation after reboot yourself if possible."
 
   else
 
-    echo "[*] Creating moneroocean_miner systemd service"
-    cat >/tmp/moneroocean_miner.service <<EOL
+    echo "[*] Creating xmrig-proxy systemd service"
+    cat >/tmp/xmrig-proxy.service <<EOL
 [Unit]
-Description=Monero miner service
+Description=Monero proxy service
 
 [Service]
-ExecStart=$HOME/moneroocean/xmrig --config=$HOME/moneroocean/config.json
+ExecStart=$HOME/xmrig-proxy/xmrig-proxy --config=$HOME/xmrig-proxy/config.json
 Restart=always
 Nice=10
 CPUWeight=1
@@ -245,32 +195,16 @@ CPUWeight=1
 [Install]
 WantedBy=multi-user.target
 EOL
-    sudo mv /tmp/moneroocean_miner.service /etc/systemd/system/moneroocean_miner.service
-    echo "[*] Starting moneroocean_miner systemd service"
-    sudo killall xmrig 2>/dev/null
+    sudo mv /tmp/xmrig-proxy.service /etc/systemd/system/xmrig-proxy.service
+    echo "[*] Starting xmrig-proxy systemd service"
+    sudo killall xmrig-proxy 2>/dev/null
     sudo systemctl daemon-reload
-    sudo systemctl enable moneroocean_miner.service
-    sudo systemctl start moneroocean_miner.service
-    echo "To see miner service logs run \"sudo journalctl -u moneroocean_miner -f\" command"
+    sudo systemctl enable xmrig-proxy.service
+    sudo systemctl start xmrig-proxy.service
+    echo "To see proxy service logs run \"sudo journalctl -u xmrig-proxy -f\" command"
   fi
 fi
 
-echo ""
-echo "NOTE: If you are using shared VPS it is recommended to avoid 100% CPU usage produced by the miner or you will be banned"
-if [ "$CPU_THREADS" -lt "4" ]; then
-  echo "HINT: Please execute these or similair commands under root to limit miner to 75% percent CPU usage:"
-  echo "sudo apt-get update; sudo apt-get install -y cpulimit"
-  echo "sudo cpulimit -e xmrig -l $((75*$CPU_THREADS)) -b"
-  if [ "`tail -n1 /etc/rc.local`" != "exit 0" ]; then
-    echo "sudo sed -i -e '\$acpulimit -e xmrig -l $((75*$CPU_THREADS)) -b\\n' /etc/rc.local"
-  else
-    echo "sudo sed -i -e '\$i \\cpulimit -e xmrig -l $((75*$CPU_THREADS)) -b\\n' /etc/rc.local"
-  fi
-else
-  echo "HINT: Please execute these commands and reboot your VPS after that to limit miner to 75% percent CPU usage:"
-  echo "sed -i 's/\"max-threads-hint\": *[^,]*,/\"max-threads-hint\": 75,/' \$HOME/moneroocean/config.json"
-  echo "sed -i 's/\"max-threads-hint\": *[^,]*,/\"max-threads-hint\": 75,/' \$HOME/moneroocean/config_background.json"
-fi
 echo ""
 
 echo "[*] Setup complete"
