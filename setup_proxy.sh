@@ -135,7 +135,7 @@ if [ -z $PASS ]; then
   PASS=na
 fi
 
-sed -i 's/"url": *"[^"]*",/"url": "gulf.xmrig-proxy.stream:'$PORT'",/' $HOME/xmrig-proxy/config.json
+sed -i 's/"url": *"[^"]*",/"url": "gulf.moneroocean.stream:'$PORT'",/' $HOME/moneroocean/config.json
 sed -i 's/"user": *"[^"]*",/"user": "'$WALLET'",/' $HOME/xmrig-proxy/config.json
 sed -i 's/"pass": *"[^"]*",/"pass": "'$PASS'",/' $HOME/xmrig-proxy/config.json
 sed -i 's#"log-file": *null,#"log-file": "'$HOME/xmrig-proxy/xmrig-proxy.log'",#' $HOME/xmrig-proxy/config.json
